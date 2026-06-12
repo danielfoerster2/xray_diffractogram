@@ -1,4 +1,4 @@
-program xray_intensity
+program compute_intensity
     implicit none
     integer, parameter                  :: n_bins = 50000, n_el_max = 5, n_tab = 50000, n_dims = 3
     double precision, parameter         :: tab_width = 5000.0d0/n_tab, d_max = 20.0d0
@@ -315,5 +315,5 @@ contains
     endsubroutine read_f
 
 
-endprogram xray_intensity
+endprogram
 
