@@ -1,0 +1,20 @@
+# Fortran build artifacts
+*.o
+*.mod
+*.smod
+a.out
+compute_intensity
+xray_intensity
+
+# Program output
+intensity_dbf.dat
+intensity_fast.dat
+intensity_precise.dat
+
+# Per-process scratch from write_f.py / read_f
+f_vals.dat
+f_vals_*.dat
+
+# Python
+__pycache__/
+*.py[cod]
