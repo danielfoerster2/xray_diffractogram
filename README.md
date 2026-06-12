@@ -1,7 +1,7 @@
 # X-ray diffractogram
 
 Computes the X-ray scattering intensity from a molecular-dynamics trajectory. Atomic form factors (including anomalous dispersion at the chosen
-photon energy) are supplied by xraydb through a small Python script. This requires xraydb to be installed.
+photon energy) are supplied by xraydb through a small Python script. This requires python3 and xraydb (https://xraypy.github.io/XrayDB/installation.html) to be installed.
 
 
 ## Compilation:
@@ -10,11 +10,11 @@ gfortran compute_intensity.F90 -o compute_intensity
 
 ## Preparation
 
-The program reads two input files and writes one or more result files.
+The program reads two input files (the user has to supply them) and writes one or more result files.
 
-1. movie.xyz: Multi-frame XYZ trajectory. Coordinates are expected to be in Angstroms (converted to nm internally). The box is treated as infinite (no periodic wrapping) unless the box-reading line in `read_movie` is enabled.
+1. movie.xyz: Multi-frame XYZ trajectory. Coordinates are expected to be in Angstroms (converted to nm internally). The box is treated as infinite (no periodic wrapping) unless the box-reading line in subroutine read_movie is enabled.
 
-2. q_vals.dat: List of q-values for which the profile is calculated, one value per line (unit nm^-1)
+2. q_vals.dat: List of q-values for which the profile is calculated, one value per line (unit nm^-1). An example file is provided.
 
 ## Run
 

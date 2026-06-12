@@ -5,7 +5,8 @@ program compute_intensity
     double complex, parameter           :: imag = (0.0d0, 1.0d0)
     logical, parameter                  :: use_debye_waller = .false., precise = .true., fast = .false.
     integer                             :: n_frames, i_at, j_at, i_bin, q_i, p_type, i_frame, n_atoms_cst, n_el, i_el, j_el, error
-    integer, allocatable                :: typ(:, :), n_atoms(:), hist(:, :)
+    integer, allocatable                :: typ(:, :), n_atoms(:)
+    integer(kind=8), allocatable        :: hist(:, :)
     double precision                    :: dr(n_dims), sinc_table(0:n_tab), f_abs2, intensity_q
     double precision, allocatable       :: xyzt(:, :, :), mean_xyz(:, :), msd(:), q_vals(:), f0(:, :), f1_f2(:, :), intensity(:),&
                                             & box(:, :)
@@ -69,9 +70,8 @@ program compute_intensity
         allocate(hist((n_el * (n_el+1)) /2, -1:n_bins), intensity(size(q_vals)))
         call tabulate_sinc()
 
-        intensity = 0.0d0
+        hist = 0
         do i_frame = 1, n_frames
-            hist = 0
             do i_at = 1, n_atoms(i_frame)
                 do j_at = i_at+1, n_atoms(i_frame)
                     dr = xyzt(:, j_at, i_frame) - xyzt(:, i_at, i_frame)
@@ -85,22 +85,24 @@ program compute_intensity
                 p_type = p_map(typ(i_at, i_frame), typ(i_at, i_frame), n_el)
                 hist(p_type, -1) = hist(p_type, -1) + 1
             enddo
+        enddo
 
-            do q_i=1, size(q_vals)
-                do i_el = 1, n_el
-                    f1 = f1_f2(i_el, 1) + imag*f1_f2(i_el, 2) + f0(i_el, q_i)
-                    do j_el = i_el, n_el
-                        f2 = f1_f2(j_el, 1) + imag*f1_f2(j_el, 2) + f0(j_el, q_i)
-                        p_type = p_map(i_el, j_el, n_el)
-                        f_abs2 = dble(f1 * conjg(f2) + f2 * conjg(f1))
-                        intensity(q_i) = intensity(q_i) + f_abs2 * hist(p_type, -1) / 2.0d0
-                        do i_bin = 1, n_bins
-                            intensity(q_i) = intensity(q_i) + f_abs2 * hist(p_type, i_bin) * sinc_tb(q_vals(q_i)*i_bin*d_max/n_bins)
-                        enddo
+        intensity = 0.0d0
+        do q_i=1, size(q_vals)
+            do i_el = 1, n_el
+                f1 = f1_f2(i_el, 1) + imag*f1_f2(i_el, 2) + f0(i_el, q_i)
+                do j_el = i_el, n_el
+                    f2 = f1_f2(j_el, 1) + imag*f1_f2(j_el, 2) + f0(j_el, q_i)
+                    p_type = p_map(i_el, j_el, n_el)
+                    f_abs2 = dble(f1 * conjg(f2) + f2 * conjg(f1))
+                    intensity(q_i) = intensity(q_i) + f_abs2 * hist(p_type, -1) / 2.0d0
+                    do i_bin = 0, n_bins
+                        intensity(q_i) = intensity(q_i) + f_abs2 * hist(p_type, i_bin) * sinc_tb(q_vals(q_i)*i_bin*d_max/n_bins)
                     enddo
                 enddo
             enddo
         enddo
+
         intensity = intensity/n_frames
 
         open(16, file="intensity_fast.dat", action="write", status="replace")
