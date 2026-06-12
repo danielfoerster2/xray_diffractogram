@@ -4,13 +4,13 @@ program xray_intensity
     double precision, parameter         :: tab_width = 5000.0d0/n_tab, d_max = 20.0d0
     double complex, parameter           :: imag = (0.0d0, 1.0d0)
     logical, parameter                  :: use_debye_waller = .true., precise = .false., fast = .true.
-    integer                             :: n_frames, i_at, j_at, i_bin, i_dist, q_i, p_type, i_frame, n_atoms_cst, n_el, i_el,&
+    integer                             :: n_frames, i_at, j_at, i_bin, q_i, p_type, i_frame, n_atoms_cst, n_el, i_el,&
                                             & j_el, error
     integer, allocatable                :: typ_i(:, :), n_atoms(:), hist(:, :)
     double precision                    :: dr(n_dims), sinc_table(0:n_tab), f_abs2, intensity_q
     double precision, allocatable       :: xyzt(:, :, :), mean_xyz(:, :), msd(:), q_vals(:), f0(:, :), f1_f2(:, :), intensity(:),&
                                             & box(:, :)
-    double complex                      :: f1, f2
+    double complex                      :: f1, f2, f1_bare
     character(len=2)                    :: el(n_el_max)
     character(len=20)                   :: energy
     character(len=2), allocatable       :: typ(:, :)
@@ -71,8 +71,8 @@ program xray_intensity
         do q_i=1, size(q_vals)
             intensity_q = 0.0d0
             do i_at = 1, n_atoms_cst
-                f1 = (f1_f2(typ_i(i_at, 1), 1) + imag*f1_f2(typ_i(i_at, 1), 2) + f0(typ_i(i_at, 1), q_i)) &
-                        &* exp(-q_vals(q_i)**2 * msd(i_at) / 2)
+                f1_bare = f1_f2(typ_i(i_at, 1), 1) + imag*f1_f2(typ_i(i_at, 1), 2) + f0(typ_i(i_at, 1), q_i)
+                f1 = f1_bare * exp(-q_vals(q_i)**2 * msd(i_at) / 2)
                 do j_at = i_at+1, n_atoms_cst
                     f2 = (f1_f2(typ_i(j_at, 1), 1) + imag*f1_f2(typ_i(j_at, 1), 2) + f0(typ_i(j_at, 1), q_i)) &
                             &* exp(-q_vals(q_i)**2 * msd(j_at) / 2)
@@ -80,7 +80,8 @@ program xray_intensity
                     dr = dr - box(:, 1) * nint(dr/box(:, 1))
                     intensity_q = intensity_q + dble(f1 * conjg(f2) + f2 * conjg(f1)) * sinc_tb(q_vals(q_i)*norm2(dr))
                 enddo
-                intensity_q = intensity_q + dble(f1 * conjg(f1))
+                ! Self term (i = i): zero separation, so no Debye-Waller damping - use the bare form factor.
+                intensity_q = intensity_q + dble(f1_bare * conjg(f1_bare))
             enddo
             write(15, *) q_vals(q_i), intensity_q
         enddo
@@ -102,11 +103,11 @@ program xray_intensity
                     dr = dr - box(:, i_frame) * nint(dr/box(:, i_frame))
                     i_bin = nint(norm2(dr)/d_max*n_bins)
                     if(i_bin.le.n_bins) then
-                        p_type = p_map(typ_i(i_at, 1), typ_i(j_at, 1), n_el)
+                        p_type = p_map(typ_i(i_at, i_frame), typ_i(j_at, i_frame), n_el)
                         hist(p_type, i_bin) = hist(p_type, i_bin) +1
                     endif
                 enddo
-                p_type = p_map(typ_i(i_at, 1), typ_i(i_at, 1), n_el)
+                p_type = p_map(typ_i(i_at, i_frame), typ_i(i_at, i_frame), n_el)
                 hist(p_type, 0) = hist(p_type, 0) + 1
             enddo
 
@@ -215,8 +216,7 @@ contains
         double precision, allocatable, intent(out)  :: xyzt(:, :, :), box(:, :)
         integer, allocatable, intent(out)           :: n_atoms(:)
         character(len=2), allocatable, intent(out)  :: typ(:, :)
-        integer                                     :: n_at, n_frames, error, i_at, i_frame, n_atoms_max, j
-        character(len=100)                          :: buf, buf2
+        integer                                     :: n_at, n_frames, error, i_at, i_frame, n_atoms_max
 
         open(20, file=trim(filename), action='read', iostat=error)
         if (error.ne.0) stop "Error in function read_movie: "//filename//" missing"
