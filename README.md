@@ -18,7 +18,7 @@ The program reads two input files (the user has to supply them) and writes one o
 
 ## Run
 
-./xray_intensity xxx
+./compute_intensity xxx
 
 where xxx is x-ray photon energy in eV.
 
